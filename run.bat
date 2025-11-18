@@ -1,53 +1,21 @@
 @echo off
-setlocal enabledelayedexpansion
+chcp 65001 >nul
+echo 编译游戏引擎...
 
-rem 创建编译目录
-if not exist "build\classes" mkdir "build\classes"
+REM 创建输出目录
+if not exist build\classes mkdir build\classes
 
-rem 设置类路径
-set "LWJGL_CP=."
-if exist "lib\lwjgl" (
-  set "LWJGL_CP=.;lib\lwjgl\*"
-)
+REM 编译所有Java文件
+javac -encoding UTF-8 -d build/classes -cp . src/main/java/com/gameengine/math/Vector2.java src/main/java/com/gameengine/input/InputManager.java src/main/java/com/gameengine/core/Component.java src/main/java/com/gameengine/core/GameObject.java src/main/java/com/gameengine/components/TransformComponent.java src/main/java/com/gameengine/components/PhysicsComponent.java src/main/java/com/gameengine/components/RenderComponent.java src/main/java/com/gameengine/graphics/Renderer.java src/main/java/com/gameengine/recording/RecordingStorage.java src/main/java/com/gameengine/recording/FileRecordingStorage.java src/main/java/com/gameengine/recording/RecordingJson.java src/main/java/com/gameengine/recording/RecordingConfig.java src/main/java/com/gameengine/recording/RecordingService.java src/main/java/com/gameengine/core/GameEngine.java src/main/java/com/gameengine/core/GameLogic.java src/main/java/com/gameengine/scene/Scene.java src/main/java/com/gameengine/example/GameScene.java src/main/java/com/gameengine/example/MenuScene.java src/main/java/com/gameengine/example/ReplayScene.java src/main/java/com/gameengine/example/GameExample.java
 
-rem 查找所有 Java 源文件
-set "SOURCES="
-for /r "src\main\java" %%f in (*.java) do (
-  set "SOURCES=!SOURCES! %%f"
-)
-
-rem 编译
-echo Compiling Java sources...
-javac -encoding UTF-8 -d build\classes -cp "%LWJGL_CP%" %SOURCES%
-if errorlevel 1 (
-  echo Compilation failed!
-  exit /b 1
-)
-echo Compilation successful.
-
-rem 设置运行时类路径
-set "CLASSPATH=build\classes"
-if exist "lib\lwjgl" (
-  set "CLASSPATH=build\classes;lib\lwjgl\*"
-)
-
-rem 计算 natives 路径
-set "OS_ID=windows"
-if /i "%PROCESSOR_ARCHITECTURE%"=="AMD64" (
-  set "ARCH_ID=x86_64"
-) else if /i "%PROCESSOR_ARCHITECTURE%"=="ARM64" (
-  set "ARCH_ID=arm64"
+if %errorlevel% equ 0 (
+    echo 编译成功！
+    echo 运行游戏...
+    java -Dfile.encoding=UTF-8 -cp build/classes com.gameengine.example.GameExample
 ) else (
-  set "ARCH_ID=x86_64"
+    echo 编译失败！
+    pause
+    exit /b 1
 )
 
-rem 设置 LWJGL natives 路径
-set "JAVA_FLAGS="
-set "NATIVES_PATH=lib\lwjgl\natives\%OS_ID%-%ARCH_ID%"
-if exist "%NATIVES_PATH%" (
-  set "JAVA_FLAGS=-Dorg.lwjgl.librarypath=%NATIVES_PATH%"
-)
-
-rem 运行程序
-echo Running game...
-java %JAVA_FLAGS% -cp "%CLASSPATH%" com.gameengine.example.Game
+pause

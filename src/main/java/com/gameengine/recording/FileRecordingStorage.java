@@ -1,6 +1,9 @@
 package com.gameengine.recording;
 
-import java.io.*;
+import java.io.BufferedReader;
+import java.io.BufferedWriter;
+import java.io.File;
+import java.io.IOException;
 import java.nio.file.Files;
 import java.nio.file.Path;
 import java.nio.file.Paths;
@@ -8,19 +11,27 @@ import java.util.ArrayList;
 import java.util.Arrays;
 import java.util.List;
 
+/**
+ * 基于文件的录制存储实现
+ * 使用 JSONL 格式保存录制数据
+ */
 public class FileRecordingStorage implements RecordingStorage {
     private BufferedWriter writer;
 
     @Override
     public void openWriter(String path) throws IOException {
         Path p = Paths.get(path);
-        if (p.getParent() != null) Files.createDirectories(p.getParent());
+        if (p.getParent() != null) {
+            Files.createDirectories(p.getParent());
+        }
         writer = Files.newBufferedWriter(p);
     }
 
     @Override
     public void writeLine(String line) throws IOException {
-        if (writer == null) throw new IllegalStateException("writer not opened");
+        if (writer == null) {
+            throw new IllegalStateException("writer not opened");
+        }
         writer.write(line);
         writer.newLine();
     }
@@ -28,8 +39,12 @@ public class FileRecordingStorage implements RecordingStorage {
     @Override
     public void closeWriter() {
         if (writer != null) {
-            try { writer.flush(); } catch (Exception ignored) {}
-            try { writer.close(); } catch (Exception ignored) {}
+            try { 
+                writer.flush(); 
+            } catch (Exception ignored) {}
+            try { 
+                writer.close(); 
+            } catch (Exception ignored) {}
             writer = null;
         }
     }
@@ -49,12 +64,14 @@ public class FileRecordingStorage implements RecordingStorage {
     @Override
     public List<File> listRecordings() {
         File dir = new File("recordings");
-        if (!dir.exists() || !dir.isDirectory()) return new ArrayList<>();
+        if (!dir.exists() || !dir.isDirectory()) {
+            return new ArrayList<>();
+        }
         File[] files = dir.listFiles((d, name) -> name.endsWith(".json") || name.endsWith(".jsonl"));
-        if (files == null) return new ArrayList<>();
-        Arrays.sort(files, (a,b) -> Long.compare(b.lastModified(), a.lastModified()));
+        if (files == null) {
+            return new ArrayList<>();
+        }
+        Arrays.sort(files, (a, b) -> Long.compare(b.lastModified(), a.lastModified()));
         return new ArrayList<>(Arrays.asList(files));
     }
 }
-
-

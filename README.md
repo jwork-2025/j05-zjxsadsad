@@ -1,56 +1,219 @@
-[![Review Assignment Due Date](https://classroom.github.com/assets/deadline-readme-button-22041afd0340ce965d47ae6ef1cefeee28c7c493a6346c4f15d667ab976d596c.svg)](https://classroom.github.com/a/iHSjCEgj)
-# J05
+# j03 - 葫芦娃游戏引擎
 
-本版本采用 LWJGL + OpenGL 实现纯 GPU 渲染，窗口与输入基于 GLFW，文本渲染通过 AWT 字体离屏生成纹理后在 OpenGL 中批量绘制。
+一个基于Java Swing的2D游戏引擎，实现了葫芦娃与妖精的对战游戏，支持游戏录制与回放功能。
 
+## 功能特性
 
-## 核心类型与概念
+- **主菜单系统**: 提供开始游戏、回放录制、退出游戏三个选项
+- **游戏录制**: 自动录制游戏过程，保存为JSONL格式
+- **游戏回放**: 可回放已录制的游戏，完整重现游戏过程
+- **核心引擎**: 游戏循环、场景管理、对象生命周期管理
+- **渲染系统**: 基于Swing的2D渲染，支持矩形、圆形、线条、文字绘制
+- **输入处理**: 键盘输入管理
+- **物理系统**: 速度、摩擦力、边界检测
+- **碰撞检测**: 玩家与敌人、子弹与敌人的碰撞检测
+- **战斗系统**: 玩家血量、敌人血量、子弹、炸弹系统
+- **组件系统**: 基于ECS架构的组件-实体系统
 
-- **Scene（场景）**：一组 `GameObject` 的容器，负责生命周期（`initialize/update/render/clear`）与场景间切换。示例：`MenuScene`, `GameScene`, `ReplayScene`。
-- **GameObject（游戏对象）**：由多个 `Component` 组成的实体，管理自身更新与渲染委托。支持自定义 `render()`（如玩家外观组合）。
-- **Component（组件）**：面向数据/单体行为的可组合单元，例如：
-  - `TransformComponent`：位置/旋转/缩放（本项目主要使用位置与尺寸）
-  - `PhysicsComponent`：速度/摩擦/运动学数据（行为由 `PhysicsSystem` 统一处理）
-  - `RenderComponent`：基础形状绘制（矩形/圆等，颜色与尺寸）
-- **System（系统）**：面向“过程”的批处理逻辑，跨对象统一执行。例如 `PhysicsSystem` 负责所有带 `PhysicsComponent` 的对象物理更新。并行物理计算通过 `ExecutorService` 线程池实现，按批处理提升多核利用。
-- **IRenderer/GPURenderer**：渲染后端抽象与 LWJGL 实现，负责窗口/上下文/绘制 API 封装，文本纹理缓存与绘制。
-- **EntityFactory**：常用外观/组合的建造器（如 Player、AI 外观），便于游戏与回放共享同一套“预制”。
+## 快速开始
 
+### 环境要求
 
-## 游戏录制/回放机制
+- **Java 11** 或更高版本
 
-- **存储抽象**：`RecordingStorage` 定义录制的读/写/列举接口，默认实现 `FileRecordingStorage`（JSONL 文件）。
-- **录制服务**：`RecordingService` 在运行时异步写 JSONL 行：
-  - header：窗口大小/版本
-  - input：关键输入事件（just pressed）
-  - keyframe：周期关键帧（对象位置与可选渲染外观 `rt/w/h/color`）
-  - 采用“暖机 + 周期写入 + 结束强制写入”的策略，避免空关键帧
-- **回放场景**：`ReplayScene` 读取 JSONL，解析为 keyframe 列表，按时间在相邻关键帧间做线性插值，使用 `EntityFactory`/`RenderComponent` 恢复外观并渲染。
+### 运行游戏
 
-
-## 编译与运行
-
-1) 下载 LWJGL 依赖与原生库（按平台自动处理）
-
-```bash
-./download_lwjgl.sh
+#### Windows系统
+```batch
+run.bat
 ```
 
-2) 编译并启动（脚本会自动编译 src/main/java 下所有源码并运行）
-
+#### Linux/Mac系统
 ```bash
+chmod +x run.sh
 ./run.sh
 ```
 
+### 游戏说明
 
-## 作业要求
+#### 主菜单操作
+- **↑/↓ 方向键**: 选择菜单选项
+- **Enter**: 确认选择
+- **ESC**: 退出游戏
 
-- 参考本仓库代码，完善你自己的游戏：
- 
-- 为你的游戏设计并实现“存档与回放”功能：
-  - 存档：定义存储抽象（文件/网络/内存均可），录制关键帧 + 输入/事件
-  - 回放：读取存档，恢复对象状态并插值渲染，保证外观与行为可见且稳定
+#### 游戏操作
+- **WASD** 或 **方向键**: 移动葫芦娃
+- **H键** 或 **空格**: 发射子弹
+- **J键**: 发射炸弹（CD: 20秒）
+- **ESC**: 结束游戏返回主菜单
+- **R键**: 游戏结束后返回主菜单
 
-提示：请尽量保持模块解耦（渲染/输入/逻辑/存储）。
+#### 回放操作
+- **↑/↓ 方向键**: 选择录制文件
+- **Enter**: 开始回放
+- **ESC**: 结束回放返回主菜单
+- **R键**: 回放结束后返回主菜单
 
-**重要提醒：尽量手写代码，不依赖自动生成，考试会考！**
+### 游戏机制
+
+- **玩家血量**: 初始20点，被敌人碰撞减少1点
+- **敌人血量**: 初始10点，被子弹击中减少1点，被炸弹炸到减少8点
+- **子弹特性**: 可反弹墙壁，最大飞行距离为5个屏幕宽度
+- **炸弹特性**: 爆炸范围200像素，冷却时间20秒
+- **敌人生成**: 每2秒自动生成一个新敌人
+- **自动录制**: 开始游戏时自动录制，退出游戏时自动保存
+
+## 项目结构
+
+```
+j03-zjxsadsad/
+├── src/main/java/com/gameengine/
+│   ├── core/              # 核心引擎
+│   │   ├── GameEngine.java       # 游戏引擎主类
+│   │   ├── GameObject.java       # 游戏对象基类
+│   │   ├── Component.java        # 组件基类
+│   │   └── GameLogic.java        # 游戏逻辑处理
+│   ├── components/        # 组件系统
+│   │   ├── TransformComponent.java  # 位置变换组件
+│   │   ├── PhysicsComponent.java    # 物理组件
+│   │   └── RenderComponent.java     # 渲染组件
+│   ├── graphics/          # 渲染系统
+│   │   └── Renderer.java            # 渲染器
+│   ├── input/             # 输入系统
+│   │   └── InputManager.java        # 输入管理器
+│   ├── math/              # 数学工具
+│   │   └── Vector2.java             # 2D向量
+│   ├── scene/             # 场景管理
+│   │   └── Scene.java               # 场景基类
+│   ├── recording/         # 录制系统
+│   │   ├── RecordingService.java    # 录制服务
+│   │   ├── RecordingStorage.java    # 存储接口
+│   │   ├── FileRecordingStorage.java # 文件存储实现
+│   │   ├── RecordingConfig.java     # 录制配置
+│   │   └── RecordingJson.java       # JSON解析工具
+│   └── example/           # 游戏实现
+│       ├── GameExample.java         # 主入口
+│       ├── MenuScene.java           # 主菜单场景
+│       ├── GameScene.java           # 游戏场景
+│       └── ReplayScene.java         # 回放场景
+├── recordings/            # 游戏录制文件目录
+├── build/                 # 编译输出目录
+├── run.bat               # Windows启动脚本
+├── run.sh                # Linux/Mac启动脚本
+└── README.md             # 项目说明文档
+```
+
+## 录制文件说明
+
+游戏录制文件保存在 `recordings/` 目录下，采用JSONL格式（每行一个JSON对象）：
+
+- **文件命名**: `game_YYYYMMDD_HHMMSS.jsonl`
+- **文件格式**: 
+  - `header`: 录制文件头，包含版本和分辨率信息
+  - `keyframe`: 关键帧，记录所有游戏对象的位置和状态
+  - `input`: 输入事件，记录玩家的按键操作
+
+录制文件可以完整重现游戏过程，包括：
+- 玩家移动轨迹
+- 敌人生成和移动
+- 子弹发射和飞行轨迹
+- 炸弹爆炸效果
+- 所有游戏对象的动态变化
+
+## 技术架构
+
+### 组件系统(ECS)
+
+引擎使用组件-实体系统(ECS)设计模式：
+
+```java
+// 创建游戏对象
+GameObject player = new GameObject("Player");
+
+// 添加变换组件
+TransformComponent transform = player.addComponent(
+    new TransformComponent(new Vector2(400, 300))
+);
+
+// 添加物理组件
+PhysicsComponent physics = player.addComponent(
+    new PhysicsComponent(1.0f)
+);
+physics.setFriction(0.95f);
+
+// 添加渲染组件
+RenderComponent render = player.addComponent(
+    new RenderComponent(
+        RenderComponent.RenderType.RECTANGLE,
+        new Vector2(20, 20),
+        new RenderComponent.Color(1.0f, 0.0f, 0.0f, 1.0f)
+    )
+);
+```
+
+### 场景管理
+
+游戏包含三个主要场景：
+
+1. **MenuScene（主菜单）**: 游戏启动界面
+2. **GameScene（游戏场景）**: 实际游戏进行场景
+3. **ReplayScene（回放场景）**: 游戏录像回放场景
+
+### 录制与回放系统
+
+录制系统在游戏进行时自动工作：
+- 进入GameScene时自动开始录制
+- 退出GameScene时自动停止并保存录制
+- 回放时动态创建和销毁游戏对象，完整重现游戏过程
+
+## 开发指南
+
+### 添加新组件
+
+```java
+public class MyComponent extends Component<MyComponent> {
+    // 组件数据
+    private int value;
+    
+    public MyComponent(int value) {
+        this.value = value;
+    }
+    
+    @Override
+    public void update(float deltaTime) {
+        // 更新逻辑
+    }
+}
+```
+
+### 创建自定义游戏对象
+
+```java
+GameObject customObject = new GameObject("Custom") {
+    @Override
+    public void update(float deltaTime) {
+        super.update(deltaTime);
+        // 自定义更新逻辑
+    }
+    
+    @Override
+    public void render() {
+        // 自定义渲染逻辑
+    }
+};
+```
+
+## 技术特点
+
+- **零外部依赖**: 仅使用Java标准库
+- **简单构建**: Shell脚本一键编译运行
+- **跨平台**: 支持Windows、Linux、Mac系统
+- **组件化设计**: 基于ECS架构，易于扩展
+- **场景系统**: 清晰的场景切换逻辑
+- **录制回放**: 完整的游戏过程记录与重现
+- **代码结构**: 职责分离，易于维护
+
+## 许可证
+
+本项目仅供学习和参考使用。
+
